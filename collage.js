@@ -70,6 +70,7 @@ $.fn.collage = function(options){
 
         rewindRows(rows, cols)
         rewindCols(cols)
+        maxColumn(cols)
     };
 
     function rewindCols(cols) {
@@ -104,6 +105,17 @@ $.fn.collage = function(options){
         }
     }
 
+    function maxColumn(cols) {
+        var maxColWidth = 0,
+            tmp = 0;
+        for(var c = 0; c < cols.length; c++) {
+            tmp = col_height(cols[c])
+            if(maxColWidth < tmp)
+                maxColWidth = tmp
+        }
+        settings.container.css('height', maxColWidth)
+    }
+
     function row_width(items) {
         var width = 0,
             tmp;
@@ -115,6 +127,19 @@ $.fn.collage = function(options){
                 width += tmp
         });
         return width;
+    }
+
+    function col_height(items) {
+        var height = 0,
+            tmp;
+        $(items).filter(function(i) {
+            tmp = $(this).height()
+            if(i != items.length-1)
+                height += tmp + settings.gutter;
+            else
+                height += tmp
+        });
+        return height;
     }
 
 };
