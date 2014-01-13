@@ -94,9 +94,12 @@ $.fn.collage = function(options){
             containerWidth = settings.container.width();
 
         if(!settings.noResize) {
+            var prop = containerWidth / row_width(rows[0]),
+                item = null;
             for(var i = 0; row_width(rows[0]) < containerWidth; i++) {
                 if(i >= cols.length) i = 0
-                $(cols[i]).css({ width: '+=' + 1})
+                item = $(cols[i])
+                item.css({ width: Math.ceil(item.width() * prop)})
             }
         }
 
