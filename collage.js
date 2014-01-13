@@ -6,7 +6,8 @@ $.fn.collage = function(options){
         item: '.cell',
         container: $(this),
         count: null,
-        gutter: 2
+        gutter: 2,
+        noResize: false
     }, options);
 
     return this.each(function() {
@@ -45,6 +46,8 @@ $.fn.collage = function(options){
             if((firstRowWidth + itemWidth) < containerWidth) {
                 firstRowWidth += itemWidth;
                 colsNum++;
+                if(colsNum == settings.count)
+                    settings.noResize = true
             }
             else {
                 return false;
@@ -90,9 +93,11 @@ $.fn.collage = function(options){
             itemWidth = 0,
             containerWidth = settings.container.width();
 
-        for(var i = 0; row_width(rows[0]) < containerWidth; i++) {
-            if(i >= cols.length) i = 0
-            $(cols[i]).css({ width: '+=' + 1})
+        if(!settings.noResize) {
+            for(var i = 0; row_width(rows[0]) < containerWidth; i++) {
+                if(i >= cols.length) i = 0
+                $(cols[i]).css({ width: '+=' + 1})
+            }
         }
 
         for(var r = 0; r < rows.length; r++) {
