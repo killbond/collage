@@ -7,7 +7,6 @@ $.fn.collage = function(options){
         container: $(this),
         count: null,
         gutter: 2,
-        noResize: false
     }, options);
 
     return this.each(function() {
@@ -34,6 +33,8 @@ $.fn.collage = function(options){
 
 
     function init() {
+        settings.noResize = false
+
         var firstRowWidth = 0,
             containerWidth = settings.container.width(),
             cols = [],
