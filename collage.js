@@ -7,7 +7,8 @@ $.fn.collage = function(options){
         container: $(this),
         count: null,
         gutter: 2,
-        lazy: true
+        lazy: true,
+        resize: true
     }, options);
 
     return this.each(function() {
@@ -33,7 +34,8 @@ $.fn.collage = function(options){
 
 
         $(window).resize(function() {
-            init();
+            if (settings.resize)
+                init();
         });
     });
 
