@@ -7,6 +7,7 @@ $.fn.collage = function(options){
         container: $(this),
         count: null,
         gutter: 2,
+        lazy: true
     }, options);
 
     return this.each(function() {
@@ -19,12 +20,17 @@ $.fn.collage = function(options){
             .find(settings.item).css({position: 'absolute', display: 'block', top: 0, left: 0})
             .find('img').css('width', '100%');
 
-        settings.container.find('img').load(function() {
-            settings.count += 1;
-            if(settings.count ==  settings.container.find('img').size()) {
-                init();
-            }
-        });
+        if (settings.lazy) {
+            settings.container.find('img').load(function () {
+                settings.count += 1;
+                if (settings.count == settings.container.find('img').size()) {
+                    init();
+                }
+            });
+        } else {
+            init();
+        }
+
 
         $(window).resize(function() {
             init();
