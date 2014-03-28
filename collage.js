@@ -1,14 +1,41 @@
 (function($){
 
-$.fn.collage = function(options){
+    Array.prototype.min = function () {
+        return Math.min.apply(null, this);
+    }
+
+    Array.prototype.max = function () {
+        return Math.max.apply(null, this);
+    }
+
+    Array.prototype.kmin = function () {
+        return this.indexOf(this.min())
+    }
+
+    Array.prototype.sum = function () {
+        if (!this.length) return 0
+        return this.reduce(function (a, b) {
+            return a + b;
+        })
+    }
+
+    Array.prototype.average = function () {
+        if (!this.length) return 0
+        var iSum = this.reduce(function (a, b) {
+            return a + b
+        })
+        return Math.ceil(iSum / this.length)
+    }
+
+    $.fn.collage = function(options){
 
     var settings = $.extend({}, {
         item: '.cell',
         container: $(this),
         count: null,
         gutter: 2,
-        lazy: true,
-        resize: true
+        averFactor: 0.75,
+        lazy: true
     }, options);
 
     return this.each(function() {
@@ -17,9 +44,9 @@ $.fn.collage = function(options){
         }, settings);
 
 
-        settings.container.css('position', 'relative')
-            .find(settings.item).css({position: 'absolute', display: 'block', top: 0, left: 0})
-            .find('img').css('width', '100%');
+        settings.container.css('position', 'relative').css('overflow', 'hidden')
+            .find(settings.item).css({position: 'absolute', display: 'inline-block', top: 0, left: 0}).css('overflow', 'hidden')
+            .find('img').css('width', '100%').css('position', 'relative');
 
         if (settings.lazy) {
             settings.container.find('img').load(function () {
@@ -29,135 +56,113 @@ $.fn.collage = function(options){
                 }
             });
         } else {
+            settings.count = settings.container.find('img').size();
             init();
         }
 
 
         $(window).resize(function() {
-            if (settings.resize)
+            if (!settings.container.hasClass('load'))
                 init();
         });
     });
 
 
     function init() {
-        settings.noResize = false
+        settings.items.sort(function (img1, img2) {
+            return img1.clientHeight - img2.clientHeight
+        })
 
-        var firstRowWidth = 0,
+        var iRowWidth = 0,
             containerWidth = settings.container.width(),
-            cols = [],
-            rows = [],
-            rowsCount = 0,
-            colsNum = 0;
+            iColsNum = 0,
+            aColumnHeights = [],
+            aColumnWidths = [],
+            aLastRow = []
+        iDiffWidth = 0,
+            iGutter = settings.gutter,
+            iItemsCount = settings.items.length,
+            iRow = 0,
+            iColPointer = 0,
+            iColFirstRow = 0,
+            bNoResize = false,
+            iAverageHeight = 0
 
-        settings.items.css('width', 'initial').css('top', 0).css('left', 0).filter(function(i) {
-            var itemWidth = $(this).width() + settings.gutter;
-            if((firstRowWidth + itemWidth) < containerWidth) {
-                firstRowWidth += itemWidth;
-                colsNum++;
-                if(colsNum == settings.count)
-                    settings.noResize = true
+
+        for (iItem in settings.items) {
+
+            if (iItem == 'length' && !bNoResize) {
+                iAverageHeight = aColumnHeights.average();
+                break
+            }
+
+            oItem = settings.items[iItem]
+
+            if (oItem instanceof Object) {
+                oItem.style.width = 'auto'
+                oItem.style.height = 'auto'
+                oItem.style.top = '0px'
+                oItem.style.left = '0px'
+                $(oItem).find('img').css('left', 0).css('top', 0).css('height', 'auto').css('width', '100%')
+                iItemWidth = oItem.clientWidth + iGutter
+            }
+            iColsNum = aColumnWidths.length
+            if (((iRowWidth + iItemWidth) < containerWidth || iColsNum == 0) && oItem instanceof Object && !iRow) {
+                iRowWidth += iItemWidth
+                aColumnWidths.push(oItem.clientWidth)
+                aColumnHeights.push(oItem.clientHeight)
+                if ((iColsNum + 1) == iItemsCount) bNoResize = true
             }
             else {
-                return false;
+                if (iRow == 0) {
+                    iDiffWidth = Math.ceil((containerWidth - iRowWidth) / iColsNum)
+                    iRowWidth = 0
+                    iRow++
+                    for (iFirstRowItem in settings.items) {
+                        if (iColFirstRow >= iColsNum || iFirstRowItem == 'length') break
+                        oItemFirstRow = settings.items[iFirstRowItem]
+                        if (!bNoResize) {
+                            oItemFirstRow.style.width = iDiffWidth + aColumnWidths[iColFirstRow] + 'px'
+                            aColumnWidths[iColFirstRow] = oItemFirstRow.clientWidth
+                            aColumnHeights[iColFirstRow] = oItemFirstRow.clientHeight + iGutter
+                            aLastRow[iFirstRowItem] = oItemFirstRow
+                        }
+                        if (iColFirstRow != 0) {
+                            oItemFirstRow.style.left = (aColumnWidths.slice(0, iFirstRowItem).sum() + iGutter * iFirstRowItem) + 'px'
+                        }
+                        iColFirstRow++
+                    }
+                }
+                if (bNoResize) break
+                iColPointer = aColumnHeights.kmin()
+                oItem.style.width = aColumnWidths[iColPointer] + 'px'
+                oItem.style.top = aColumnHeights[iColPointer] + 'px'
+                aLastRow[iColPointer] = oItem
+                oItem.style.left = (aColumnWidths.slice(0, iColPointer).sum() + iGutter * iColPointer) + 'px'
+                aColumnHeights[iColPointer] += oItem.clientHeight + iGutter
             }
-        });
-
-        rowsNum = Math.ceil(settings.items.length / colsNum);
-
-        while(rowsNum > rowsCount) {
-            rows.push(settings.items.slice(rowsCount * colsNum, colsNum * (rowsCount + 1)))
-            rowsCount++
         }
 
-        for(var c = 0; c < rows[0].length; c++) {
-            cols[c] = [];
-            for(var r = 0; r < rows.length; r++) {
-                if(rows[r][c])
-                    cols[c][r] = rows[r][c]
-                else
-                    break
-            }
-        }
+        for (iItem in aLastRow) {
+            if (parseInt(iItem) != iItem) break
+            oItem = aLastRow[iItem]
 
-        rewindRows(rows, cols)
-        rewindCols(cols)
-        maxColumn(cols)
+            if (aColumnHeights[iItem] >= iAverageHeight) { // Уменьшать
+                iTargetHeight = Math.ceil(oItem.clientHeight - (aColumnHeights[iItem] - iAverageHeight) * settings.averFactor)
+                $(oItem).find('img').css('top', -Math.ceil((oItem.clientHeight - iTargetHeight) / 2))
+            } else {
+                iTargetHeight = oItem.clientHeight + Math.ceil((iAverageHeight - oItem.offsetTop - oItem.clientHeight) * settings.averFactor)
+                oImg = $(oItem).find('img')
+                iPastImgWidth = oImg.width()
+                iImgWidth = oImg.css('height', iTargetHeight).css('width', 'auto').width()
+                oImg.css('left', -Math.ceil((iImgWidth - iPastImgWidth) / 2))
+            }
+            aColumnHeights[iItem] - oItem.clientHeight
+            oItem.style.height = iTargetHeight + 'px'
+            aColumnHeights[iItem] + oItem.clientHeight
+        }
+//        settings.container.stop().animate({ height: aColumnHeights.min() + Math.ceil((aColumnHeights.average() - aColumnHeights.min()) * 0.4) }, 400 )
+        settings.container.stop().animate({ height: aColumnHeights.max() }, 400)
     };
-
-    function rewindCols(cols) {
-        var colHeight = 0;
-
-        for(var c = 0; c < cols.length; c++) {
-            colHeight = 0;
-            for(var r = 1; r < cols[c].length; r++) {
-                colHeight += $(cols[c][r - 1]).height() + settings.gutter
-                $(cols[c][r]).css('top', colHeight)
-            }
-        }
-    }
-
-    function rewindRows(rows, cols) {
-        var rowWidth = 0,
-            itemWidth = 0,
-            containerWidth = settings.container.width();
-
-        if(!settings.noResize) {
-            var prop = containerWidth / row_width(rows[0]),
-                item = null;
-            for(var i = 0; row_width(rows[0]) < containerWidth; i++) {
-                if(i >= cols.length) i = 0
-                item = $(cols[i])
-                item.css({ width: Math.ceil(item.width() * prop)})
-            }
-        }
-
-        for(var r = 0; r < rows.length; r++) {
-            rowWidth = 0
-            for(var c = 0; c < rows[r].length; c++) {
-                itemWidth = $(rows[0][c]).width()
-                $(rows[r][c]).css('left', rowWidth).css('width', itemWidth)
-                rowWidth += itemWidth + settings.gutter
-            }
-        }
-    }
-
-    function maxColumn(cols) {
-        var maxColWidth = 0,
-            tmp = 0;
-        for(var c = 0; c < cols.length; c++) {
-            tmp = col_height(cols[c])
-            if(maxColWidth < tmp)
-                maxColWidth = tmp
-        }
-        settings.container.css('height', maxColWidth)
-    }
-
-    function row_width(items) {
-        var width = 0,
-            tmp;
-        $(items).filter(function(i) {
-            tmp = $(this).width()
-            if(i != items.length-1)
-                width += tmp + settings.gutter;
-            else
-                width += tmp
-        });
-        return width;
-    }
-
-    function col_height(items) {
-        var height = 0,
-            tmp;
-        $(items).filter(function(i) {
-            tmp = $(this).height()
-            if(i != items.length-1)
-                height += tmp + settings.gutter;
-            else
-                height += tmp
-        });
-        return height;
-    }
-
-};
+    };
 })(jQuery);
